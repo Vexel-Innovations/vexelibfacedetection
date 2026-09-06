@@ -65,9 +65,9 @@ SET(fdt_lib_name   facedetection)
 FILE(GLOB_RECURSE fdt_source_files ${fdt_src_dir}/*.cpp)
 LIST(SORT         fdt_source_files)
 
-SET(INSTALLHEADER_FILES ${fdt_inc_dir}/facedetectcnn.h)
+SET(INSTALLHEADER_FILES ${fdt_inc_dir}/facedetectcnn.h ${fdt_inc_dir}/facedetect20.hpp)
 
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
@@ -181,6 +181,9 @@ if (DEMO)
     add_executable(benchmark ${fdt_base_dir}/example/benchmark.cpp)
     target_link_libraries(benchmark ${fdt_lib_name} ${OpenCV_LIBS})
 endif()
+
+add_executable(modern_detect_cli ${fdt_base_dir}/example/modern_detect_cli.cpp)
+target_link_libraries(modern_detect_cli PRIVATE ${fdt_lib_name})
 
 if (GSTREAMER)
     find_package(OpenCV REQUIRED)
