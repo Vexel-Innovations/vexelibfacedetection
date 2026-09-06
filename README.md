@@ -168,12 +168,13 @@ python example/detect_demo.py --image images/cnnresult.png
 
 **Vexel Innovations** — Engineering high-performance computer vision and AI infrastructure.
 
-### Core Team
+### Core Team & Contributors
 
-| Role | Contributor |
-|------|-------------|
-| Lead Engineer | Usama — [@UsamaAbuLaworworker](https://github.com/UsamaAbuLaworworker) |
-| Organization | [Vexel Innovations](https://github.com/Vexel-Innovations) |
+| Contributor / Entity | Role / Function | GitHub Profile |
+|----------------------|-----------------|----------------|
+| **Vexel Innovations** | Lead Organization & AI Infrastructure | [@Vexel-Innovations](https://github.com/Vexel-Innovations) |
+| **Uszkido / Usama** | Lead Architect & Modernization Engineer | [@Uszkido](https://github.com/Uszkido) |
+| **Vexelpro** | Core Contributor & Systems Verification | [@Vexelpro](https://github.com/Vexelpro) |
 
 ### Acknowledgments
 
