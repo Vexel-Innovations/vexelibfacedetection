@@ -23,39 +23,53 @@ std::vector<Face> FaceDetector::detect(
         return results;
     }
 
-    // Call core CNN engine
-    std::vector<FaceRect> faces = objectdetect_cnn(
-        image_data.data(),
+    alignas(64) uint8_t result_buffer[FACEDETECTION_RESULT_BUFFER_SIZE];
+    
+    int* pResults = facedetect_cnn(
+        result_buffer,
+        const_cast<unsigned char*>(image_data.data()),
         width,
         height,
         step
     );
 
-    results.reserve(faces.size());
-    for (const auto& f : faces) {
-        if (f.score < options.confidence_threshold) {
+    if (!pResults) {
+        return results;
+    }
+
+    int count = pResults[0];
+    results.reserve(count);
+
+    for (int i = 0; i < count; ++i) {
+        int16_t* p = (int16_t*)(pResults + 1) + i * FACEDETECTION_RESULT_STRIDE_SHORTS;
+        int confidence = p[0];
+        int x = p[1];
+        int y = p[2];
+        int w = p[3];
+        int h = p[4];
+
+        if (confidence < options.confidence_threshold * 100) {
             continue;
         }
 
         Face face{};
-        face.score = f.score;
+        face.score = static_cast<float>(confidence) / 100.0f;
         face.bbox = BoundingBox{
-            .x = f.x,
-            .y = f.y,
-            .width = f.w,
-            .height = f.h
+            .x = x,
+            .y = y,
+            .width = w,
+            .height = h
         };
 
-        for (int i = 0; i < 5; ++i) {
-            face.landmarks[i] = Point2D{
-                .x = f.lm[i * 2],
-                .y = f.lm[i * 2 + 1]
+        for (int j = 0; j < 5; ++j) {
+            face.landmarks[j] = Point2D{
+                .x = static_cast<int>(p[5 + j * 2]),
+                .y = static_cast<int>(p[5 + j * 2 + 1])
             };
         }
 
         results.push_back(face);
     }
-
     return results;
 }
 

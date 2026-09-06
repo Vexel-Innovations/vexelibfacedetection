@@ -11,7 +11,7 @@
 #include <string>
 
 #define STB_IMAGE_IMPLEMENTATION
-#include "../example/stb_image.h"
+#include "stb_image.h"
 
 int main(int argc, char** argv) {
     if (argc < 2) {

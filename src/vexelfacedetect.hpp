@@ -5,7 +5,14 @@
 
 #pragma once
 
+#if __has_include("vexelfacedetection_export.h")
+#include "vexelfacedetection_export.h"
+#elif __has_include("facedetection_export.h")
 #include "facedetection_export.h"
+#else
+#define FACEDETECTION_EXPORT
+#endif
+
 #include <vector>
 #include <span>
 #include <cstdint>
