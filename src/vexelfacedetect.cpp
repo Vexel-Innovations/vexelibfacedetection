@@ -1,8 +1,14 @@
-#include "facedetect20.hpp"
+/*
+ VexelLibFaceDetection - Modern C++20 API Implementation
+ Copyright (c) 2026, Vexel Innovations. All rights reserved.
+ Licensed under the BSD 3-Clause License.
+*/
+
+#include "vexelfacedetect.hpp"
 #include "facedetectcnn.h"
 #include <vector>
 
-namespace facedetect {
+namespace vexelfacedetect {
 
 std::vector<Face> FaceDetector::detect(
     std::span<const uint8_t> image_data,
@@ -17,7 +23,7 @@ std::vector<Face> FaceDetector::detect(
         return results;
     }
 
-    // Call objectdetect_cnn from core engine
+    // Call core CNN engine
     std::vector<FaceRect> faces = objectdetect_cnn(
         image_data.data(),
         width,
@@ -53,4 +59,4 @@ std::vector<Face> FaceDetector::detect(
     return results;
 }
 
-} // namespace facedetect
+} // namespace vexelfacedetect

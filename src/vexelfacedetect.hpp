@@ -1,5 +1,6 @@
 /*
- Modern C++20 interface for libfacedetection
+ VexelLibFaceDetection Modern C++20 Interface
+ Copyright (c) Vexel Innovations
 */
 
 #pragma once
@@ -13,7 +14,7 @@
 #include <array>
 #include <optional>
 
-namespace facedetect {
+namespace vexelfacedetect {
 
 struct Point2D {
     int x{0};
@@ -30,7 +31,7 @@ struct BoundingBox {
 struct Face {
     float score{0.0f};
     BoundingBox bbox{};
-    std::array<Point2D, 5> landmarks{}; // 5 facial landmarks (eyes, nose, mouth corners)
+    std::array<Point2D, 5> landmarks{}; // 5 facial landmarks
 };
 
 struct DetectionOptions {
@@ -70,4 +71,4 @@ public:
     }
 };
 
-} // namespace facedetect
+} // namespace vexelfacedetect

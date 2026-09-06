@@ -1,3 +1,6 @@
+# VexelLibFaceDetection - Python Package Setup
+# Copyright (c) 2026, Vexel Innovations. All rights reserved.
+
 from setuptools import setup, Extension
 from setuptools.command.build_ext import build_ext
 import sys
@@ -16,7 +19,7 @@ ext_modules = [
         'pyfacedetect',
         sources=[
             'python/pyfacedetect.cpp',
-            'src/facedetect20.cpp',
+            'src/vexelfacedetect.cpp',
             'src/facedetectcnn.cpp',
             'src/facedetectcnn-data.cpp',
             'src/facedetectcnn-model.cpp',
@@ -29,16 +32,6 @@ ext_modules = [
         language='c++',
     ),
 ]
-
-def has_flag(compiler, flagname):
-    import tempfile
-    with tempfile.NamedTemporaryFile('w', suffix='.cpp') as f:
-        f.write('int main (int argc, char **argv) { return 0; }')
-        try:
-            compiler.compile([f.name], extra_postargs=[flagname])
-        except Exception:
-            return False
-    return True
 
 class BuildExt(build_ext):
     c_opts = {
@@ -54,12 +47,24 @@ class BuildExt(build_ext):
         build_ext.build_extensions(self)
 
 setup(
-    name='pyfacedetect',
-    version='0.2.0',
-    author='Shiqi Yu / Antigravity Modernization',
-    description='Modern C++20 High-Performance CNN Face Detection Python Library',
+    name='vexelfacedetect',
+    version='1.0.0',
+    author='Vexel Innovations',
+    author_email='info@vexelinnovations.com',
+    description='VexelLibFaceDetection — High-Performance CNN Face Detection by Vexel Innovations',
+    url='https://github.com/Vexel-Innovations/libfacedetection',
     ext_modules=ext_modules,
     setup_requires=['pybind11>=2.6.0'],
     cmdclass={'build_ext': BuildExt},
     zip_safe=False,
+    license='BSD-3-Clause',
+    classifiers=[
+        'Development Status :: 5 - Production/Stable',
+        'Intended Audience :: Developers',
+        'License :: OSI Approved :: BSD License',
+        'Programming Language :: Python :: 3',
+        'Programming Language :: C++',
+        'Topic :: Scientific/Engineering :: Artificial Intelligence',
+        'Topic :: Scientific/Engineering :: Image Recognition',
+    ],
 )

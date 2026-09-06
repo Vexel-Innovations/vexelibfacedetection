@@ -1,8 +1,5 @@
-cmake_minimum_required(VERSION 2.8.12)
-
-# CMakeLists for libfacedetectcnn
-cmake_minimum_required(VERSION 3.10)
-project(libfacedetection)
+cmake_minimum_required(VERSION 3.16)
+project(vexelfacedetection)
 
 option(ENABLE_NEON "whether use neon, if use arm please set it on" OFF)
 option(ENABLE_AVX512 "use avx512" OFF)
@@ -21,51 +18,18 @@ if (BUILD_SHARED_LIBS)
     set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 endif()
 
-SET(BUILD_VERSION "v0.0.3")
-# Find Git Version Patch
-IF(EXISTS "${CMAKE_SOURCE_DIR}/.git")
-    if(NOT GIT)
-        SET(GIT $ENV{GIT})
-    endif()
-    if(NOT GIT)
-        FIND_PROGRAM(GIT NAMES git git.exe git.cmd)
-    endif()
-    IF(GIT)
-        EXECUTE_PROCESS(
-            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-            COMMAND ${GIT} describe --tags
-            RESULT_VARIABLE GIT_DESCRIBE_RESULT
-            OUTPUT_VARIABLE GIT_VERSION
-            OUTPUT_STRIP_TRAILING_WHITESPACE
-            ERROR_QUIET
-        )
-        if(NOT GIT_DESCRIBE_RESULT EQUAL 0 OR NOT GIT_VERSION)
-            EXECUTE_PROCESS(
-                WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-                COMMAND ${GIT} rev-parse --short HEAD
-                RESULT_VARIABLE GIT_REV_PARSE_RESULT
-                OUTPUT_VARIABLE GIT_VERSION
-                OUTPUT_STRIP_TRAILING_WHITESPACE
-                ERROR_QUIET
-            )
-        endif()
-        IF(GIT_VERSION)
-            SET(BUILD_VERSION ${GIT_VERSION})
-	ENDIF()
-    ENDIF()
-ENDIF()
-message("BUILD_VERSION:${BUILD_VERSION}")
+SET(BUILD_VERSION "v1.0.0")
 
 SET(fdt_base_dir   ${PROJECT_SOURCE_DIR})
 SET(fdt_src_dir    ${fdt_base_dir}/src)
 SET(fdt_inc_dir    ${fdt_base_dir}/src)
 
-SET(fdt_lib_name   facedetection)
+SET(fdt_lib_name   vexelfacedetection)
 
 FILE(GLOB_RECURSE fdt_source_files ${fdt_src_dir}/*.cpp)
 LIST(SORT         fdt_source_files)
 
-SET(INSTALLHEADER_FILES ${fdt_inc_dir}/facedetectcnn.h ${fdt_inc_dir}/facedetect20.hpp)
+SET(INSTALLHEADER_FILES ${fdt_inc_dir}/facedetectcnn.h ${fdt_inc_dir}/vexelfacedetect.hpp)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -151,7 +115,7 @@ INSTALL(TARGETS ${fdt_lib_name}
     RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
     LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
     ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
-    PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/facedetection
+    PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/vexelfacedetection
     INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
     )
 export(TARGETS ${fdt_lib_name}
@@ -182,8 +146,8 @@ if (DEMO)
     target_link_libraries(benchmark ${fdt_lib_name} ${OpenCV_LIBS})
 endif()
 
-add_executable(modern_detect_cli ${fdt_base_dir}/example/modern_detect_cli.cpp)
-target_link_libraries(modern_detect_cli PRIVATE ${fdt_lib_name})
+add_executable(vexel_detect_cli ${fdt_base_dir}/example/vexel_detect_cli.cpp)
+target_link_libraries(vexel_detect_cli PRIVATE ${fdt_lib_name})
 
 if (GSTREAMER)
     find_package(OpenCV REQUIRED)
@@ -193,7 +157,7 @@ if (GSTREAMER)
     pkg_search_module(GSTREAMER_BASE REQUIRED gstreamer-base-1.0)
     pkg_search_module(GSTREAMER_VIDEO REQUIRED gstreamer-video-1.0)
 
-    add_library(gstfacedetect SHARED
+    add_library(gstvexelfacedetect SHARED
         example/libfacedetect.cpp
     )
 

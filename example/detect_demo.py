@@ -1,3 +1,6 @@
+# VexelLibFaceDetection - Python Detection & Visualization Demo
+# Copyright (c) 2026, Vexel Innovations. All rights reserved.
+
 import cv2
 import numpy as np
 import pyfacedetect
@@ -5,7 +8,7 @@ import argparse
 import time
 
 def main():
-    parser = argparse.ArgumentParser(description="Modern Pyfacedetect Python Demo")
+    parser = argparse.ArgumentParser(description="VexelLibFaceDetection Python Demo — Vexel Innovations")
     parser.add_argument("--image", type=str, default="images/cnnresult.png", help="Path to input image")
     parser.add_argument("--iterations", type=int, default=1, help="Number of benchmark iterations")
     args = parser.parse_args()
@@ -19,12 +22,12 @@ def main():
     options = pyfacedetect.DetectionOptions()
     options.confidence_threshold = 0.3
 
-    print("===========================================")
-    print("      pyfacedetect Python Modern Demo      ")
-    print("===========================================")
-    print(f"Image shape: {image.shape}")
+    print("==============================================")
+    print("   VexelLibFaceDetection  |  Vexel Innovations")
+    print("==============================================")
+    print(f"Image: {args.image} — shape: {image.shape}")
 
-    # Benchmark loop
+    # Benchmark
     start = time.perf_counter()
     for _ in range(args.iterations):
         faces = detector.detect(image, options)
@@ -33,27 +36,23 @@ def main():
     avg_ms = ((end - start) / args.iterations) * 1000.0
     fps = 1000.0 / avg_ms if avg_ms > 0 else 0.0
 
-    print("\nResults:")
-    print("-------------------------------------------")
-    print(f"Detected Faces : {len(faces)}")
+    print(f"\n--- Detection Results ---")
+    print(f"Faces Detected : {len(faces)}")
     print(f"Avg Latency    : {avg_ms:.2f} ms")
-    print(f"Throughput     : {fps:.2f} FPS")
-    print("-------------------------------------------\n")
+    print(f"Throughput     : {fps:.2f} FPS\n")
 
     for i, face in enumerate(faces):
-        print(f"Face #{i+1}: score={face.score:.4f} {face.bbox}")
-        # Draw bounding box
+        print(f"[Face {i+1}] score={face.score:.4f} {face.bbox}")
         x, y, w, h = face.bbox.x, face.bbox.y, face.bbox.width, face.bbox.height
         cv2.rectangle(image, (x, y), (x + w, y + h), (0, 255, 0), 2)
 
-        # Draw 5 landmarks
         colors = [(255, 0, 0), (0, 0, 255), (0, 255, 255), (255, 255, 0), (255, 0, 255)]
         for k, lm in enumerate(face.landmarks):
             cv2.circle(image, (lm.x, lm.y), 3, colors[k], -1)
 
-    output_path = "output_detected.png"
+    output_path = "vexel_detected_output.png"
     cv2.imwrite(output_path, image)
-    print(f"Saved visualization result to {output_path}")
+    print(f"Saved: {output_path}")
 
 if __name__ == "__main__":
     main()
