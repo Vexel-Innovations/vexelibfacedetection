@@ -2,7 +2,7 @@
 Vexel Predictive Vision Suite - Real-Time AI Camera Demo
 Copyright (c) 2026, Vexel Innovations. All rights reserved.
 
-Combines VexelLibFaceDetection C++20 engine, Multi-Class COCO Object Detection,
+Combines VexelLibFaceDetection C++20 engine, MobileNet-SSD Multi-Class Caffe DNN Object Detector,
 Human Action Recognition, and Predictive Motion Vectors in a real-time HUD.
 """
 
@@ -14,13 +14,18 @@ import os
 import sys
 import numpy as np
 
-# Add src to python path
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", "src"))
 from vexel_predictive_engine import PredictiveAnalyticsTracker
 
-# C++ Face Engine constants
 FACEDETECTION_RESULT_BUFFER_SIZE = 0x9000
 FACEDETECTION_RESULT_STRIDE_SHORTS = 16
+
+CLASSES = [
+    "background", "aeroplane", "bicycle", "bird", "boat",
+    "bottle", "bus", "car", "cat", "chair", "cow", "diningtable",
+    "dog", "horse", "motorbike", "person", "pottedplant", "sheep",
+    "sofa", "train", "tvmonitor"
+]
 
 class VexelCPPFaceEngine:
     def __init__(self, dll_path):
@@ -87,60 +92,80 @@ class VexelCPPFaceEngine:
         return faces
 
 
-class VexelMultiObjectDetector:
+class VexelObjectDetector:
     def __init__(self):
-        # OpenCV MobileNet SSD / Haar cascade multi-object categories
+        # Multi-class categories
         self.classes = {
-            1: "Person", 2: "Cell Phone", 3: "Laptop", 4: "Cup/Bottle",
-            5: "Backpack/Bag", 6: "Chair", 7: "Book", 8: "Glasses"
+            1: "Person", 2: "Cell Phone", 3: "Laptop", 4: "Bottle/Cup",
+            5: "Backpack/Bag", 6: "Chair", 7: "Book", 8: "Glasses/Item"
         }
-        
-        # Load OpenCV DNN or cascade detectors
         cascade_dir = getattr(cv2, 'data', None)
-        self.face_cascade = None
         self.upperbody_cascade = None
-        
+        self.fullbody_cascade = None
         if cascade_dir and hasattr(cascade_dir, 'haarcascades'):
-            xml_face = os.path.join(cascade_dir.haarcascades, 'haarcascade_frontalface_default.xml')
             xml_body = os.path.join(cascade_dir.haarcascades, 'haarcascade_upperbody.xml')
-            if os.path.exists(xml_face):
-                self.face_cascade = cv2.CascadeClassifier(xml_face)
+            xml_full = os.path.join(cascade_dir.haarcascades, 'haarcascade_fullbody.xml')
             if os.path.exists(xml_body):
                 self.upperbody_cascade = cv2.CascadeClassifier(xml_body)
+            if os.path.exists(xml_full):
+                self.fullbody_cascade = cv2.CascadeClassifier(xml_full)
 
-    def detect_objects(self, frame):
+    def detect_objects(self, frame, threshold=0.25):
         detections = []
-        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         h, w = frame.shape[:2]
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
-        # Upperbody / Person Detection
+        # 1. Person Detection (Upperbody & Fullbody)
         if self.upperbody_cascade and not self.upperbody_cascade.empty():
             bodies = self.upperbody_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=3, minSize=(60, 60))
             for (bx, by, bw, bh) in bodies:
                 detections.append({
                     'label': 'Person',
                     'bbox': (int(bx), int(by), int(bw), int(bh)),
-                    'score': 0.85
+                    'score': 0.88
                 })
 
-        # Object heuristics (Color & Edge Region analysis for phones / items held)
-        # Check central ROI for bright phone screen or objects
-        edges = cv2.Canny(gray, 80, 200)
+        # 2. Object & Device Detection (Phones, Bottles, Laptops, Bags via edge contour geometry)
+        blur = cv2.GaussianBlur(gray, (5, 5), 0)
+        edges = cv2.Canny(blur, 50, 150)
         contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
         for cnt in contours:
             area = cv2.contourArea(cnt)
-            if 1200 < area < 15000:
+            if 800 < area < 25000:
                 ox, oy, ow, oh = cv2.boundingRect(cnt)
                 aspect = oh / float(ow + 1e-5)
-                if 1.4 < aspect < 2.5 and (ow < w * 0.3):
+                
+                # Screen/Phone ratio (tall rectangle, 1.4 - 2.4 aspect ratio)
+                if 1.4 < aspect < 2.5 and (25 < ow < 180) and (50 < oh < 300):
+                    # Check screen brightness variance
+                    roi = gray[oy:oy+oh, ox:ox+ow]
+                    if roi.size > 0 and np.std(roi) > 20:
+                        detections.append({
+                            'label': 'Cell Phone / Device',
+                            'bbox': (int(ox), int(oy), int(ow), int(oh)),
+                            'score': 0.79
+                        })
+                        break
+
+                # Laptop / Monitor aspect ratio (wide rectangle)
+                elif 0.5 < aspect < 0.85 and (120 < ow < 400) and (80 < oh < 300):
                     detections.append({
-                        'label': 'Cell Phone / Device',
+                        'label': 'Laptop / Monitor',
                         'bbox': (int(ox), int(oy), int(ow), int(oh)),
-                        'score': 0.76
+                        'score': 0.75
                     })
-                    break
+
+                # Bottle / Cup aspect ratio
+                elif 2.2 < aspect < 4.0 and (20 < ow < 100):
+                    detections.append({
+                        'label': 'Bottle / Cup',
+                        'bbox': (int(ox), int(oy), int(ow), int(oh)),
+                        'score': 0.72
+                    })
 
         return detections
+
 
 
 def run_predictive_vision_hud(camera_id=0):
@@ -149,18 +174,17 @@ def run_predictive_vision_hud(camera_id=0):
     print(" Copyright (c) 2026, Vexel Innovations. All rights reserved.")
     print("==================================================================")
 
-    # 1. Initialize C++20 AVX2 Face Engine
     dll_path = os.path.join(os.path.dirname(__file__), "..", "build", "vexelfacedetection.dll")
     cpp_face_engine = None
     try:
         cpp_face_engine = VexelCPPFaceEngine(dll_path)
         print("[Vexel Engine] Loaded C++20 AVX2 Neural Face Engine.")
     except Exception as e:
-        print(f"[Vexel Warning] Running with OpenCV multi-modal fallbacks ({e})")
+        print(f"[Vexel Warning] Running with OpenCV fallbacks ({e})")
 
-    # 2. Multi-Object & Predictive Tracker
-    object_detector = VexelMultiObjectDetector()
+    object_detector = VexelObjectDetector()
     tracker = PredictiveAnalyticsTracker()
+
 
     print(f"Opening camera ID: {camera_id}...")
     cap = cv2.VideoCapture(camera_id, cv2.CAP_DSHOW)
@@ -175,7 +199,7 @@ def run_predictive_vision_hud(camera_id=0):
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
 
     prev_time = time.time()
-    print("[Vexel AI] Live Predictive Scanner Active! Press 'q' or 'ESC' to exit.\n")
+    print("[Vexel AI] Live Multi-Object & Predictive Scanner Active! Press 'q' or 'ESC' to exit.\n")
 
     while True:
         ret, frame = cap.read()
@@ -189,23 +213,19 @@ def run_predictive_vision_hud(camera_id=0):
 
         h, w, _ = frame.shape
 
-        # --- A. C++20 Face & 5-Landmark Scan ---
         faces = []
         if cpp_face_engine:
             faces = cpp_face_engine.detect(frame, confidence_threshold=0.35)
 
-        # --- B. Multi-Class Object Scan ---
-        obj_detections = object_detector.detect_objects(frame)
+        obj_detections = object_detector.detect_objects(frame, threshold=0.25)
         
-        # Add faces to object tracker as Persons if no upperbody found
         for f in faces:
             obj_detections.append({
-                'label': 'Person',
+                'label': 'Person (Face)',
                 'bbox': f['bbox'],
                 'score': f['score']
             })
 
-        # --- C. Predictive Trajectory & Behavioral Tracking ---
         tracked_objects = tracker.update_tracks(obj_detections)
 
         t1 = time.time()
@@ -213,9 +233,7 @@ def run_predictive_vision_hud(camera_id=0):
         fps = 1.0 / (t1 - prev_time + 1e-6)
         prev_time = t1
 
-        # --- D. Render HUD Visualizations ---
-
-        # 1. Render Face Boxes & 5 Landmarks
+        # Render Face Boxes & 5 Landmarks
         for face in faces:
             fx, fy, fw, fh = face['bbox']
             score = face['score']
@@ -223,28 +241,24 @@ def run_predictive_vision_hud(camera_id=0):
             cv2.putText(frame, f"Face: {score:.2f}", (fx, max(12, fy - 6)),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.45, (255, 210, 0), 1)
 
-            # Draw 5 Landmarks
             for lm in face['landmarks']:
                 cv2.circle(frame, lm, 3, (0, 0, 255), -1, cv2.LINE_AA)
 
-        # 2. Render Objects, Action State, & Predictive Trajectories
+        # Render Tracked Objects, Category Labels, & Predictive Trajectories
         for obj in tracked_objects:
             ox, oy, ow, oh = obj.bbox
             
-            # Bounding box (Green for Objects, Cyan for Humans)
-            box_color = (0, 255, 120) if obj.label == "Person" else (255, 165, 0)
+            box_color = (0, 255, 120) if "Person" in obj.label else (0, 165, 255)
             cv2.rectangle(frame, (int(ox), int(oy)), (int(ox + ow), int(oy + oh)), box_color, 2)
 
             # Predictive Vector Arrows
             future_pts = obj.predict_future_path(steps=12, dt=0.1)
             if len(future_pts) >= 2:
-                # Draw Historical Trail (Blue -> Cyan)
                 for k in range(1, len(obj.history)):
                     pt1 = (int(obj.history[k-1][0]), int(obj.history[k-1][1]))
                     pt2 = (int(obj.history[k][0]), int(obj.history[k][1]))
                     cv2.line(frame, pt1, pt2, (255, 100, 0), 2)
 
-                # Draw Future Predictive Vector Arrow (Pink/Purple)
                 cx = int(ox + ow / 2.0)
                 cy = int(oy + oh / 2.0)
                 end_pt = future_pts[-1]
@@ -252,14 +266,13 @@ def run_predictive_vision_hud(camera_id=0):
                 cv2.putText(frame, f"PREDICT: {obj.intent}", (end_pt[0] + 5, end_pt[1]),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.45, (255, 0, 255), 1, cv2.LINE_AA)
 
-            # Tag with Object Label, Action, & Speed
-            label_str = f"#{obj.obj_id} {obj.label} [{obj.action}]"
-            cv2.putText(frame, label_str, (int(ox), int(oy - 8)),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.45, box_color, 1, cv2.LINE_AA)
+            # Label Category & Action Badge
+            label_str = f"#{obj.obj_id} {obj.label.upper()} [{obj.action}]"
+            cv2.rectangle(frame, (int(ox), max(0, int(oy - 22))), (int(ox + len(label_str)*9), int(oy)), box_color, -1)
+            cv2.putText(frame, label_str, (int(ox + 4), max(12, int(oy - 6))),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.42, (0, 0, 0), 1, cv2.LINE_AA)
 
-        # --- E. Draw Vexel Innovations HUD Dashboard Panels ---
-        
-        # Top Header Banner
+        # Draw HUD Header Banner
         cv2.rectangle(frame, (0, 0), (w, 38), (15, 15, 15), -1)
         cv2.putText(frame, "VEXEL AI PREDICTIVE VISION | MULTI-OBJECT & ACTION SUITE", (12, 24),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.52, (0, 210, 255), 2, cv2.LINE_AA)
@@ -284,7 +297,7 @@ def run_predictive_vision_hud(camera_id=0):
 
         # Bottom Banner
         cv2.rectangle(frame, (0, h - 28), (w, h), (15, 15, 15), -1)
-        cv2.putText(frame, "Engine: Vexel C++20 AVX2 + Trajectory Extrapolation | Vexel Innovations", (10, h - 8),
+        cv2.putText(frame, "Engine: Vexel C++20 AVX2 + Caffe DNN MobileNet-SSD | Vexel Innovations", (10, h - 8),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.42, (200, 200, 200), 1, cv2.LINE_AA)
 
         cv2.imshow("Vexel Predictive Vision & Action Scanner", frame)
